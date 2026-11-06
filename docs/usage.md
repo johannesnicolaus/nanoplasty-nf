@@ -39,10 +39,12 @@ oiko_mt,oiko.fastq.gz,ont,mito,,,,,,oiko_mt_assembly.fasta
 
 ## NANOPlasty
 
-There is no public NANOPlasty container yet. Provide one of:
+NANOPlasty runs from `ghcr.io/johannesnicolaus/nanoplasty:0.2` by default. The image is built from the `Dockerfile` in
+the [NANOPlasty repository](https://github.com/johannesnicolaus/NANOPlasty) by its GitHub Action: `latest` follows
+`main`, and each `v*` tag publishes a version (e.g. `v0.2` → `:0.2`). Alternatives:
 
-- `--nanoplasty_container <image>`: an image with `NANOPlasty0.2.pl` on the `PATH` and its dependencies, for example built from the `Dockerfile` in the NANOPlasty repository.
-- `--nanoplasty_script /path/to/NANOPlasty0.2.pl`: run the script from a checkout. Its dependencies (BLAST+, kalign3, Perl `MCE` and `Parallel::ForkManager`) must be available, either through `-profile conda` or on the host `PATH`.
+- `--nanoplasty_container <image>`: any other image with `NANOPlasty0.2.pl` on the `PATH` and its dependencies.
+- `--nanoplasty_script /path/to/NANOPlasty0.2.pl`: run the script from a checkout, without a container. Its dependencies (BLAST+, kalign3, Perl `MCE` and `Parallel::ForkManager`) must come from `-profile conda` or the host `PATH`.
 
 For `plant_mito`, NANOPlasty screens reads against a plant mitochondrial BLAST database. By default it looks for the database bundled with NANOPlasty; `--plant_mito_db <dir>` points it at a directory holding a `plant_mito` BLAST database instead.
 

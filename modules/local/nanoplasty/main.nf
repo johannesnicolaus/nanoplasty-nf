@@ -3,9 +3,10 @@ process NANOPLASTY {
     label 'process_high'
 
     conda "${moduleDir}/environment.yml"
-    // No public image yet: set --nanoplasty_container once it exists. When it is
-    // unset, the process runs with conda (-profile conda) or with the host's tools.
-    container "${ params.nanoplasty_container ?: '' }"
+    // Image built by the NANOPlasty repository's GitHub Action (ghcr.io/johannesnicolaus/nanoplasty).
+    // With --nanoplasty_script the container is dropped and the script runs with conda
+    // (-profile conda) or with the host's tools.
+    container "${ params.nanoplasty_script ? '' : (params.nanoplasty_container ?: '') }"
 
     input:
     tuple val(meta), path(reads), path(seed), path(chloro_reference)

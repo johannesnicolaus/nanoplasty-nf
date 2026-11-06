@@ -50,17 +50,17 @@ Then run:
 nextflow run johannesnicolaus/nanoplasty-nf \
    -profile <docker/singularity/.../institute> \
    --input samplesheet.csv \
-   --outdir <OUTDIR> \
-   --nanoplasty_container <image with NANOPlasty>
+   --outdir <OUTDIR>
 ```
 
 > [!WARNING]
 > Please provide pipeline parameters via the CLI or Nextflow `-params-file` option. Custom config files including those provided by the `-c` Nextflow option can be used to provide any configuration _**except for parameters**_; see [docs](https://nf-co.re/docs/running/run-pipelines#using-parameter-files).
 
-> [!IMPORTANT]
-> There is no public NANOPlasty container yet. Until there is, pass `--nanoplasty_container` with your own image, or
-> run NANOPlasty from a local checkout with `--nanoplasty_script /path/to/NANOPlasty0.2.pl` and its dependencies
-> (BLAST+, kalign3, Perl MCE and Parallel::ForkManager) on the `PATH`. Samples with an `assembly` column skip NANOPlasty.
+> [!NOTE]
+> NANOPlasty runs from `ghcr.io/johannesnicolaus/nanoplasty:0.2`, built by the
+> [NANOPlasty repository](https://github.com/johannesnicolaus/NANOPlasty). To run a local checkout instead, pass
+> `--nanoplasty_script /path/to/NANOPlasty0.2.pl` with its dependencies (BLAST+, kalign3, Perl MCE and
+> Parallel::ForkManager) from `-profile conda` or the host `PATH`. Samples with an `assembly` column skip NANOPlasty.
 
 ## Pipeline output
 

@@ -86,14 +86,15 @@
                 "nanoplasty_container": {
                     "type": "string",
                     "description": "Container image providing NANOPlasty and its dependencies.",
-                    "help_text": "When unset, NANOPLASTY runs with conda (-profile conda) or with tools on the host PATH; then --nanoplasty_script is also needed.",
-                    "fa_icon": "fab fa-docker"
+                    "help_text": "Built from the Dockerfile in the NANOPlasty repository by its GitHub Action. Ignored when --nanoplasty_script is given.",
+                    "fa_icon": "fab fa-docker",
+                    "default": "ghcr.io/johannesnicolaus/nanoplasty:0.2"
                 },
                 "nanoplasty_script": {
                     "type": "string",
                     "format": "file-path",
                     "exists": true,
-                    "description": "Path to NANOPlasty0.2.pl, when it is not on the PATH inside the container.",
+                    "description": "Run this NANOPlasty0.2.pl instead of the container (dependencies via -profile conda or the host PATH).",
                     "fa_icon": "fas fa-file-code"
                 },
                 "plant_mito_db": {
