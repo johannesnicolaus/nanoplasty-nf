@@ -4,6 +4,8 @@ nf_core_version: 4.2.1
 
 lint:
   files_unchanged:
+    - .github/ISSUE_TEMPLATE/config.yml
+    - assets/sendmail_template.txt
     - CODE_OF_CONDUCT.md
     - assets/nf-core-nanoplasty-nf_logo_light.png
     - docs/images/nf-core-nanoplasty-nf_logo_light.png
