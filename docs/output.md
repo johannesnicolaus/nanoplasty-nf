@@ -1,4 +1,4 @@
-# johannesnicolaus/nanoplasty: Output
+# johannesnicolaus/nanoplasty-nf: Output
 
 ## Introduction
 
@@ -6,17 +6,86 @@ This document describes the output produced by the pipeline. Most of the plots a
 
 The directories listed below will be created in the results directory after the pipeline has finished. All paths are relative to the top-level results directory.
 
-<!-- TODO nf-core: Write this documentation describing your workflow's output -->
-
 ## Pipeline overview
 
-The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes data using the following steps:
+- [Read QC](#read-qc): NanoPlot and SeqKit statistics, optional Chopper filtering
+- [Assembly](#assembly): NANOPlasty
+- [Assembly QC](#assembly-qc): read mapping, depth, reads spanning the start/end, QUAST
+- [Annotation](#annotation): MITOS2, Chloë or the homology annotator, plus a unified GFF3
+- [Plots](#plots): circular map per sample
+- [Summary](#summary): one row per sample
+- [MultiQC](#multiqc): report gathering all of the above
+- [Pipeline information](#pipeline-information)
 
+### Read QC
 
-- [MultiQC](#multiqc) - Aggregate report describing results and QC from the whole pipeline
-- [Pipeline information](#pipeline-information) - Report metrics generated during the workflow execution
+<details markdown="1">
+<summary>Output files</summary>
 
+- `read_qc/nanoplot/<sample>/`: NanoPlot HTML report, plots and `<sample>_NanoStats.txt`.
+- `read_qc/seqkit/<sample>.tsv`: read count, length distribution and N50.
+- `read_qc/chopper/<sample>.chopper.fastq.gz`: filtered reads (only with `--filter_reads --save_filtered_reads`).
 
+</details>
+
+### Assembly
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `assembly/<sample>/`
+  - `<sample>.fasta`: the assembly used downstream (NANOPlasty's final assembly, or its raw assembly when there is no final one).
+  - `log_<sample>.txt`: NANOPlasty log. Read it first when an assembly fails or looks wrong.
+  - `assembly_<sample>_option_*.fasta`: alternative assemblies, when NANOPlasty finds more than one.
+  - `quality_scores_<sample>.txt`, `structural_variation_<sample>.vcf`: per-position support and variants called by NANOPlasty, when produced.
+  - `config_nanoplasty.txt`: the configuration file the pipeline wrote, to rerun NANOPlasty by hand.
+
+</details>
+
+### Assembly QC
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `assembly_qc/mosdepth/`: depth summaries and per-base depth on the wrapped reference (see [usage](usage.md#assembly-qc)).
+- `assembly_qc/samtools_stats/`: mapping statistics.
+- `assembly_qc/junction_support/<sample>.junction.tsv`: per contig, the number of reads spanning its start/end.
+- `assembly_qc/quast/<sample>/`: QUAST report.
+- `assembly_qc/alignments/`: BAM files (only with `--save_alignments`).
+
+</details>
+
+### Annotation
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `annotation/<sample>/<sample>.gff3`: one feature per gene with `Name` and `gene_class`. Used for the plot and gene counts.
+- `annotation/<sample>/mitos/<sample>/`: MITOS2 results (`result.gff`, `result.bed`, `result.fas`, `result.faa`, `result.png`, …) for `mito` samples.
+- `annotation/<sample>/chloe/`: Chloë GFF for `chloro` samples.
+- `annotation/<sample>/homology/`: miniprot GFF, BLASTN table and tRNAscan-SE GFF for `plant_mito` samples (and `chloro` with `--chloro_annotator homology`).
+
+</details>
+
+### Plots
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `plots/<sample>.circos.png` and `.svg`: circular map. From the outside in: position ruler with gene names; genes coloured by functional class (forward strand outer ring, reverse strand inner ring); read depth (capped at the 99.5th percentile); GC content relative to the genome mean; GC skew.
+
+</details>
+
+### Summary
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `summary/organelle_summary_mqc.tsv`: one row per sample with contig count, length, whether it falls in `genome_range`, GC, mean/median depth, minimum depth over 500 bp windows, reads spanning the start/end, and protein/tRNA/rRNA gene counts. Also shown in MultiQC.
+
+A low minimum-window depth points to a possible misjoin. Zero reads spanning the start/end means the circle is not supported by the reads.
+
+</details>
 
 ### MultiQC
 

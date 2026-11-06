@@ -8,3 +8,11 @@ multiqc/multiqc_data/llms-full.txt
 multiqc/multiqc_plots/{svg,pdf,png}/*.{svg,pdf,png}
 multiqc/multiqc_report.html
 pipeline_info/*.{html,json,txt,yml}
+read_qc/nanoplot/**
+plots/*.{png,svg}
+assembly_qc/quast/**
+assembly_qc/samtools_stats/*.stats
+annotation/*/mitos/**
+annotation/*/chloe/**
+annotation/*/homology/*.log
+summary/*.tsv

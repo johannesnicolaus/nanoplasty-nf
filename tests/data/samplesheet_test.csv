@@ -1,0 +1,2 @@
+sample,reads,platform,type,genome_range,seed,r10,min_read_length,chloro_reference,assembly
+dmel_mito,https://raw.githubusercontent.com/johannesnicolaus/nanoplasty-nf/dev/tests/data/dmel_mito_sim.fastq.gz,ont,mito,15000-22000,,,,,https://raw.githubusercontent.com/johannesnicolaus/nanoplasty-nf/dev/tests/data/dmel_mito.fa
