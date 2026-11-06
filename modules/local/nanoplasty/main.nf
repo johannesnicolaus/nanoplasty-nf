@@ -76,10 +76,15 @@ process NANOPLASTY {
     ${cmd} -c config_nanoplasty.txt
 
     # NANOPlasty appends the type to the project name (e.g. <sample>_chloro), so match by glob.
-    # Prefer the final assembly, fall back to the raw one.
+    # When it resolves a complete circle in more than one configuration (e.g. the two
+    # orientations of a plastid's single-copy region), the 'option' files hold those circles
+    # while 'final' holds the separate contigs, so prefer option_1, then final, then raw.
+    option=\$(ls out/assembly_*_option_1.fasta 2>/dev/null | head -n 1)
     final=\$(ls out/assembly_final_*.fasta 2>/dev/null | head -n 1)
     raw=\$(ls out/assembly_raw_*.fasta 2>/dev/null | head -n 1)
-    if [ -s "\$final" ]; then
+    if [ -s "\$option" ]; then
+        cp "\$option" ${prefix}.fasta
+    elif [ -s "\$final" ]; then
         cp "\$final" ${prefix}.fasta
     elif [ -s "\$raw" ]; then
         cp "\$raw" ${prefix}.fasta
