@@ -65,7 +65,7 @@ workflow ANNOTATION {
 
     MINIPROT_ALIGN ( ch_homology.prot, ch_homology.fasta )
     BLAST_BLASTN ( ch_homology.fasta, ch_homology.db, [], [], false )
-    TRNASCANSE ( ch_homology.fasta, false, false, true, false )
+    TRNASCANSE ( ch_homology.fasta, true, false, true, false )
 
     ch_gff_in = ch_gff_in.mix(
         MINIPROT_ALIGN.out.gff

@@ -10,7 +10,7 @@ process ORGANELLE_GFF {
     input:
     // mode 'normalise': annotations = [ annotator_gff ]
     // mode 'homology' : annotations = [ miniprot_gff, blastn_tsv, trnascan_gff ]
-    tuple val(meta), val(mode), val(source), path(annotations)
+    tuple val(meta), val(mode), val(source), path(annotations, stageAs: "in?/*")
 
     output:
     tuple val(meta), path("${prefix}.gff3"), emit: gff
