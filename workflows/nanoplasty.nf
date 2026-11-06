@@ -5,6 +5,7 @@
 */
 include { NANOPLASTY as NANOPLASTY_ASSEMBLE } from '../modules/local/nanoplasty/main'
 include { CIRCOS_PLOT            } from '../modules/local/circos_plot/main'
+include { FETCH_MITOS_REFDB      } from '../modules/local/fetch_mitos_refdb/main'
 include { READ_QC                } from '../subworkflows/local/read_qc'
 include { ASSEMBLY_QC            } from '../subworkflows/local/assembly_qc'
 include { ANNOTATION             } from '../subworkflows/local/annotation'
@@ -79,9 +80,20 @@ workflow NANOPLASTY {
     //
     def ch_gff = channel.empty()
     if (!params.skip_annotation) {
+        // MITOS2 reference: download URLs in a process, use local paths as they are
+        def ch_mitos_refdb = channel.empty()
+        if (params.mitos_refdb ==~ /^(https?|ftp):\/\/.*/) {
+            // only when there is at least one animal mitochondrion to annotate
+            FETCH_MITOS_REFDB (
+                ch_assembly.filter { meta, _fasta -> meta.type == 'mito' }.first().map { _meta, _fasta -> params.mitos_refdb }
+            )
+            ch_mitos_refdb = FETCH_MITOS_REFDB.out.archive.first()
+        } else {
+            ch_mitos_refdb = channel.value( file(params.mitos_refdb, checkIfExists: true) )
+        }
         ANNOTATION (
             ch_assembly,
-            file(params.mitos_refdb),
+            ch_mitos_refdb,
             params.chloro_annotator,
             [
                 chloro:     [

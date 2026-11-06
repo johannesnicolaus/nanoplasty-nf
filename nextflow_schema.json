@@ -163,7 +163,7 @@
                 },
                 "mitos_refdb": {
                     "type": "string",
-                    "default": "https://zenodo.org/api/records/4284483/files/refseq89m.tar.bz2/content",
+                    "default": "https://zenodo.org/records/4284483/files/refseq89m.tar.bz2",
                     "description": "MITOS2 reference data: a directory such as refseq89m, or its .tar.bz2 archive (local or URL).",
                     "fa_icon": "fas fa-database"
                 },
