@@ -1,0 +1,32 @@
+name: Build helper containers
+# Builds the images under containers/ and pushes them to the GitHub Container Registry.
+on:
+  push:
+    branches: [dev, master]
+    paths: ["containers/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: chloe
+            tag: "0.1.17"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: containers/${{ matrix.name }}
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/nanoplasty-${{ matrix.name }}:${{ matrix.tag }}

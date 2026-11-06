@@ -1,61 +1,86 @@
-# johannesnicolaus/nanoplasty: Usage
+# johannesnicolaus/nanoplasty-nf: Usage
 
 > _Documentation of pipeline parameters is generated automatically from the pipeline schema and can no longer be found in markdown files._
 
 ## Introduction
 
-<!-- TODO nf-core: Add documentation about anything specific to running your pipeline. For general topics, please point to (and add to) the main nf-core website. -->
+The pipeline assembles one circular organelle genome per sample with NANOPlasty, then maps the reads back,
+annotates the assembly and draws a circular map. Each sample is one row of the samplesheet; each row needs a
+single read file, so merge runs of the same sample into one `.fastq.gz` beforehand.
 
 ## Samplesheet input
 
-You will need to create a samplesheet with information about the samples you would like to analyse before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 3 columns, and a header row as shown in the examples below.
+Pass the samplesheet with `--input`. It is a comma-separated file with a header row:
 
 ```bash
 --input '[path to samplesheet file]'
 ```
 
-### Multiple runs of the same sample
-
-The `sample` identifiers have to be the same when you have re-sequenced the same sample more than once e.g. to increase sequencing depth. The pipeline will concatenate the raw reads before performing any downstream analysis. Below is an example for the same sample sequenced across 3 lanes:
-
 ```csv title="samplesheet.csv"
-sample,fastq_1,fastq_2
-CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz
-CONTROL_REP1,AEG588A1_S1_L003_R1_001.fastq.gz,AEG588A1_S1_L003_R2_001.fastq.gz
-CONTROL_REP1,AEG588A1_S1_L004_R1_001.fastq.gz,AEG588A1_S1_L004_R2_001.fastq.gz
+sample,reads,platform,type,genome_range,seed,r10,min_read_length,chloro_reference,assembly
+fly_mt,fly.fastq.gz,ont,mito,15000-22000,,true,,,
+ath_cp,ath.fastq.gz,ont,chloro,140000-170000,,,,,
+ath_mt,ath_hifi.fastq.gz,pacbio_hifi,plant_mito,300000-400000,,,,ath_cp.fasta,
+oiko_mt,oiko.fastq.gz,ont,mito,,,,,,oiko_mt_assembly.fasta
 ```
 
-### Full samplesheet
+| Column             | Required | Description                                                                                                                                                                                       |
+| ------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sample`           | yes      | Sample name: letters, digits, `_`, `.` and `-`. Must be unique.                                                                                                                                   |
+| `reads`            | yes      | Long reads, gzipped FASTQ.                                                                                                                                                                        |
+| `platform`         | yes      | `ont`, `pacbio_hifi` or `pacbio_clr`. Selects NANOPlasty's Nanopore or PacBio input and the minimap2 preset (`map-ont`, `map-hifi`, `map-pb`).                                                   |
+| `type`             | yes      | `mito` (animal mitochondrion), `chloro` (plastid) or `plant_mito` (plant mitochondrion). Selects NANOPlasty's mode and the annotator.                                                            |
+| `genome_range`     | no       | Expected genome size as `min-max`, e.g. `15000-22000`. NANOPlasty uses it to decide when to circularise; narrowing it helps when a repeat could close the circle too early. Also checked in the summary table. |
+| `seed`             | no       | FASTA seed sequence. NANOPlasty has a built-in seed system, so this is optional.                                                                                                                  |
+| `r10`              | no       | `true` for ONT R10 chemistry.                                                                                                                                                                     |
+| `min_read_length`  | no       | Minimum read length NANOPlasty uses (its defaults: 1000 for ONT, 500 for PacBio).                                                                                                                |
+| `chloro_reference` | no       | Plastid sequence of the same species. **Required for `plant_mito`**, which NANOPlasty uses to tell plastid reads apart.                                                                         |
+| `assembly`         | no       | An existing assembly (FASTA). When given, NANOPlasty is skipped and the sample goes straight to QC, annotation and plotting.                                                                      |
 
-The pipeline will auto-detect whether a sample is single- or paired-end using the information provided in the samplesheet. The samplesheet can have as many columns as you desire, however, there is a strict requirement for the first 3 columns to match those defined in the table below.
+## NANOPlasty
 
-A final samplesheet file consisting of both single- and paired-end data may look something like the one below. This is for 6 samples, where `TREATMENT_REP3` has been sequenced twice.
+There is no public NANOPlasty container yet. Provide one of:
 
-```csv title="samplesheet.csv"
-sample,fastq_1,fastq_2
-CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz
-CONTROL_REP2,AEG588A2_S2_L002_R1_001.fastq.gz,AEG588A2_S2_L002_R2_001.fastq.gz
-CONTROL_REP3,AEG588A3_S3_L002_R1_001.fastq.gz,AEG588A3_S3_L002_R2_001.fastq.gz
-TREATMENT_REP1,AEG588A4_S4_L003_R1_001.fastq.gz,
-TREATMENT_REP2,AEG588A5_S5_L003_R1_001.fastq.gz,
-TREATMENT_REP3,AEG588A6_S6_L003_R1_001.fastq.gz,
-TREATMENT_REP3,AEG588A6_S6_L004_R1_001.fastq.gz,
-```
+- `--nanoplasty_container <image>`: an image with `NANOPlasty0.2.pl` on the `PATH` and its dependencies, for example built from the `Dockerfile` in the NANOPlasty repository.
+- `--nanoplasty_script /path/to/NANOPlasty0.2.pl`: run the script from a checkout. Its dependencies (BLAST+, kalign3, Perl `MCE` and `Parallel::ForkManager`) must be available, either through `-profile conda` or on the host `PATH`.
 
-| Column    | Description                                                                                                                                                                            |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sample`  | Custom sample name. This entry will be identical for multiple sequencing libraries/runs from the same sample. Spaces in sample names are automatically converted to underscores (`_`). |
-| `fastq_1` | Full path to FastQ file for Illumina short reads 1. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                             |
-| `fastq_2` | Full path to FastQ file for Illumina short reads 2. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                             |
+For `plant_mito`, NANOPlasty screens reads against a plant mitochondrial BLAST database. By default it looks for the database bundled with NANOPlasty; `--plant_mito_db <dir>` points it at a directory holding a `plant_mito` BLAST database instead.
 
-An [example samplesheet](../assets/samplesheet.csv) has been provided with the pipeline.
+## Assembly QC
+
+Reads are mapped back to each assembly after appending its first `--wrap_length` bases (default 10 kb) to its end, so
+that reads crossing the arbitrary start/end of the circle align in one piece. Depth is folded back onto the original
+coordinates for the plot and the summary. A read counts as spanning the start/end when it covers
+`--junction_flank` bases (default 500) on both sides; a healthy circular assembly has many such reads, while zero
+suggests the ends do not really join. Use `--save_alignments` to publish the BAM files.
+
+## Annotation
+
+| Type         | Annotator                                                      | Notes                                                                                                                                                                                                                                     |
+| ------------ | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mito`       | MITOS2 (`quay.io/biocontainers/mitos`)                         | Set the genetic code with `--mitos_code` (default 5, invertebrate mitochondrial; 2 for vertebrates, 4 for cnidarians, 9 for echinoderms and flatworms, 13 for ascidians). Reference data: `--mitos_refdb`, a `refseq89m` directory or its `.tar.bz2`; downloaded from Zenodo by default. |
+| `chloro`     | Chloë (`--chloro_annotator chloe`, default)                    | Tuned for angiosperm plastids. For other lineages use `--chloro_annotator homology`.                                                                                                                                                       |
+| `plant_mito` | Homology: miniprot + BLASTN + tRNAscan-SE (`-O`)               | The established plant mitochondrial annotators (PMGA, AGORA) are web services, so the pipeline merges protein, rRNA and tRNA evidence into best non-overlapping hits.                                           |
+
+The homology references in `assets/refs/` are proteins and rRNAs from RefSeq plastomes (7 species, angiosperms to
+moss) and plant mitogenomes (6 species, angiosperms, *Cycas* and *Marchantia*); `assets/refs/build_refs.py` rebuilds
+them. Replace them with `--chloro_proteins`, `--chloro_rrnas`, `--plant_mito_proteins` and `--plant_mito_rrnas`.
+Homology annotation finds genes, not exact boundaries: check splice sites and trans-spliced genes (e.g. *nad1*,
+*nad2*, *nad5*) before submission.
+
+Every annotator's own output is published unchanged. The pipeline also writes `<sample>.gff3`, one gene-level feature
+per gene with a `gene_class` attribute, which drives the plot and the gene counts.
+
+The Chloë image is `ghcr.io/johannesnicolaus/nanoplasty-chloe:0.1.17`, built by `.github/workflows/containers.yml`
+from `containers/chloe/Dockerfile`. It is `willmundlab/chloe:0.1.17` with two fixes: the upstream image keeps its Julia
+packages under `/root` (unreadable by the non-root user Singularity runs as), and it lacks `ps`, which Nextflow needs.
 
 ## Running the pipeline
 
 The typical command for running the pipeline is as follows:
 
 ```bash
-nextflow run johannesnicolaus/nanoplasty --input ./samplesheet.csv --outdir ./results  -profile docker
+nextflow run johannesnicolaus/nanoplasty-nf --input ./samplesheet.csv --outdir ./results  -profile docker
 ```
 
 This will launch the pipeline with the `docker` configuration profile. See below for more information about profiles.
@@ -79,7 +104,7 @@ Pipeline settings can be provided in a `yaml` or `json` file via `-params-file <
 The above pipeline run specified with a params file in yaml format:
 
 ```bash
-nextflow run johannesnicolaus/nanoplasty -profile docker -params-file params.yaml
+nextflow run johannesnicolaus/nanoplasty-nf -profile docker -params-file params.yaml
 ```
 
 with:
@@ -97,14 +122,14 @@ You can also generate such `YAML`/`JSON` files via [nf-core/launch](https://nf-c
 When you run the above command, Nextflow automatically pulls the pipeline code from GitHub and stores it as a cached version. When running the pipeline after this, it will always use the cached version if available - even if the pipeline has been updated since. To make sure that you're running the latest version of the pipeline, make sure that you regularly update the cached version of the pipeline:
 
 ```bash
-nextflow pull johannesnicolaus/nanoplasty
+nextflow pull johannesnicolaus/nanoplasty-nf
 ```
 
 ### Reproducibility
 
 It is a good idea to specify the pipeline version when running the pipeline on your data. This ensures that a specific version of the pipeline code and software are used when you run your pipeline. If you keep using the same tag, you'll be running the same version of the pipeline, even if there have been changes to the code since.
 
-First, go to the [johannesnicolaus/nanoplasty releases page](https://github.com/johannesnicolaus/nanoplasty/releases) and find the latest pipeline version - numeric only (eg. `1.3.1`). Then specify this when running the pipeline with `-r` (one hyphen) - eg. `-r 1.3.1`. Of course, you can switch to another version by changing the number after the `-r` flag.
+First, go to the [johannesnicolaus/nanoplasty-nf releases page](https://github.com/johannesnicolaus/nanoplasty-nf/releases) and find the latest pipeline version - numeric only (eg. `1.3.1`). Then specify this when running the pipeline with `-r` (one hyphen) - eg. `-r 1.3.1`. Of course, you can switch to another version by changing the number after the `-r` flag.
 
 This version number will be logged in reports when you run the pipeline, so that you'll know what you used when you look back in the future. For example, at the bottom of the MultiQC reports.
 

@@ -3,6 +3,11 @@
     IMPORT MODULES / SUBWORKFLOWS / FUNCTIONS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
+include { NANOPLASTY as NANOPLASTY_ASSEMBLE } from '../modules/local/nanoplasty/main'
+include { CIRCOS_PLOT            } from '../modules/local/circos_plot/main'
+include { READ_QC                } from '../subworkflows/local/read_qc'
+include { ASSEMBLY_QC            } from '../subworkflows/local/assembly_qc'
+include { ANNOTATION             } from '../subworkflows/local/annotation'
 include { MULTIQC                } from '../modules/nf-core/multiqc/main'
 include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
@@ -18,7 +23,7 @@ include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_nano
 workflow NANOPLASTY {
 
     take:
-    ch_samplesheet // channel: samplesheet read in from --input
+    ch_samplesheet // channel: [ val(meta), path(reads), path(seed), path(chloro_reference), path(assembly) ]
     multiqc_config
     multiqc_logo
     multiqc_methods_description
@@ -28,6 +33,90 @@ workflow NANOPLASTY {
 
     def ch_versions = channel.empty()
     def ch_multiqc_files = channel.empty()
+
+    //
+    // SUBWORKFLOW: read QC (and optional filtering)
+    //
+    READ_QC (
+        ch_samplesheet.map { meta, reads, _seed, _chloro, _asm -> [ meta, reads ] },
+        params.filter_reads
+    )
+    ch_multiqc_files = ch_multiqc_files.mix( READ_QC.out.multiqc_files )
+
+    //
+    // MODULE: NANOPlasty assembly, unless the samplesheet already gives an assembly
+    //
+    def ch_inputs = ch_samplesheet
+        .map { meta, _reads, seed, chloro, asm -> [ meta, seed, chloro, asm ] }
+        .join( READ_QC.out.reads )
+        .branch { meta, seed, chloro, asm, reads ->
+            given:    asm
+                return [ meta, asm ]
+            assemble: true
+                return [ meta, reads, seed, chloro ]
+        }
+
+    NANOPLASTY_ASSEMBLE (
+        ch_inputs.assemble,
+        params.nanoplasty_script ? file(params.nanoplasty_script, checkIfExists: true) : [],
+        params.plant_mito_db     ? file(params.plant_mito_db,     checkIfExists: true) : []
+    )
+    def ch_assembly = NANOPLASTY_ASSEMBLE.out.assembly.mix( ch_inputs.given )
+
+    //
+    // SUBWORKFLOW: assembly QC
+    //
+    ASSEMBLY_QC (
+        ch_assembly,
+        READ_QC.out.reads,
+        params.wrap_length,
+        params.junction_flank
+    )
+    ch_multiqc_files = ch_multiqc_files.mix( ASSEMBLY_QC.out.multiqc_files )
+
+    //
+    // SUBWORKFLOW: annotation
+    //
+    def ch_gff = channel.empty()
+    if (!params.skip_annotation) {
+        ANNOTATION (
+            ch_assembly,
+            file(params.mitos_refdb),
+            params.chloro_annotator,
+            [
+                chloro:     [
+                    params.chloro_proteins     ?: "${projectDir}/assets/refs/chloro_proteins.faa",
+                    params.chloro_rrnas        ?: "${projectDir}/assets/refs/chloro_rrna.fna",
+                ],
+                plant_mito: [
+                    params.plant_mito_proteins ?: "${projectDir}/assets/refs/plant_mito_proteins.faa",
+                    params.plant_mito_rrnas    ?: "${projectDir}/assets/refs/plant_mito_rrna.fna",
+                ],
+            ]
+        )
+        ch_gff = ANNOTATION.out.gff
+    }
+
+    //
+    // MODULE: circular plot and per-sample summary
+    //
+    def ch_plot_in = ch_assembly
+        .join( ch_gff, remainder: true )
+        .join( ASSEMBLY_QC.out.per_base )
+        .join( ASSEMBLY_QC.out.junction )
+        .map { meta, fasta, gff, depth, junction -> [ meta, fasta, gff ?: [], depth, junction ] }
+    CIRCOS_PLOT ( ch_plot_in )
+
+    def ch_summary = CIRCOS_PLOT.out.summary
+        .map { _meta, tsv -> tsv }
+        .collectFile(
+            name: 'organelle_summary_mqc.tsv',
+            keepHeader: true,
+            skip: 1,
+            sort: true,
+            storeDir: "${outdir}/summary"
+        )
+    ch_multiqc_files = ch_multiqc_files.mix( ch_summary )
 
     //
     // Collate and save software versions

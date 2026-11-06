@@ -1,9 +1,9 @@
 #!/usr/bin/env nextflow
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    johannesnicolaus/nanoplasty
+    johannesnicolaus/nanoplasty-nf
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    Github : https://github.com/johannesnicolaus/nanoplasty
+    Github : https://github.com/johannesnicolaus/nanoplasty-nf
 ----------------------------------------------------------------------------------------
 */
 
